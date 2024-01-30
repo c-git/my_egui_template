@@ -25,7 +25,11 @@ fn main() -> anyhow::Result<()> {
         load_config(default_config_path)?
     };
 
-    dbg!(config);
+    let src_path = validate_source_directory(&config.source_path, &config.crate_.src)?;
+
+    // Get confirmation that user want to run on this source and destination pair
+
+    dbg!(config, src_path);
 
     Ok(())
 }
@@ -70,13 +74,41 @@ Create a new egui project from the template.
     }
 }
 
+fn validate_source_directory(source_path: &str, src_crate_name: &str) -> anyhow::Result<PathBuf> {
+    #[derive(serde::Deserialize)]
+    struct Package {
+        name: String,
+    }
+    #[derive(serde::Deserialize)]
+    struct CargoToml {
+        package: Package,
+    }
+    let path = PathBuf::from(source_path);
+    let path = path
+        .canonicalize()
+        .with_context(|| format!("failed to canonicalize source path: {source_path:?}"))?;
+
+    // Check for `Cargo.toml` and validate source crate name
+    let cargo_toml = path.join("Cargo.toml");
+    let cargo_toml = std::fs::read_to_string(&cargo_toml)
+        .with_context(|| format!("failed to open Cargo.toml from: {cargo_toml:?}"))?;
+    let cargo_toml: CargoToml = toml::from_str(&cargo_toml).with_context(|| {
+        format!("failed to parse Cargo.toml from source directory: {cargo_toml:?}")
+    })?;
+    if cargo_toml.package.name != src_crate_name {
+        bail!("validation of source directory failed. Expected source package name to be {src_crate_name:?} but found {:?}", cargo_toml.package.name)
+    }
+    Ok(path)
+}
+
 fn load_config(config_path: PathBuf) -> anyhow::Result<Config> {
     let config_path = config_path
         .canonicalize()
         .with_context(|| format!("failed to canonicalize the path received {config_path:?}"))?;
     let toml = std::fs::read_to_string(&config_path)
         .with_context(|| format!("failed to config read from {config_path:?}"))?;
-    let result = toml::from_str(&toml)?;
+    let result = toml::from_str(&toml)
+        .with_context(|| format!("failed to parse toml file: {config_path:?}"))?;
     Ok(result)
 }
 
@@ -109,8 +141,8 @@ fn config_path() -> anyhow::Result<PathBuf> {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct ReplacementPair {
-    from: String,
-    to: String,
+    src: String,
+    dst: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -127,16 +159,16 @@ impl Default for Config {
         Self {
             source_path: "../".into(),
             crate_: ReplacementPair {
-                from: "eframe_template".into(),
-                to: "your_crate".into(),
+                src: "eframe_template".into(),
+                dst: "your_crate".into(),
             },
             author_name: ReplacementPair {
-                from: "Emil Ernerfeldt".into(),
-                to: "".into(),
+                src: "Emil Ernerfeldt".into(),
+                dst: "".into(),
             },
             author_email: ReplacementPair {
-                from: "emil.ernerfeldt@gmail.com".into(),
-                to: "".into(),
+                src: "emil.ernerfeldt@gmail.com".into(),
+                dst: "".into(),
             },
         }
     }
