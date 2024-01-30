@@ -42,7 +42,7 @@ struct ReplacementPair {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct Config {
-    #[serde(rename(serialize = "crate"))]
+    #[serde(rename = "crate")]
     crate_: ReplacementPair,
     author_name: ReplacementPair,
     author_email: ReplacementPair,
@@ -52,6 +52,7 @@ struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            source_path: "../".into(),
             crate_: ReplacementPair {
                 from: "eframe_template".into(),
                 to: "your_crate".into(),
@@ -64,7 +65,6 @@ impl Default for Config {
                 from: "emil.ernerfeldt@gmail.com".into(),
                 to: "".into(),
             },
-            source_path: "../".into(),
         }
     }
 }
@@ -79,8 +79,29 @@ fn main() -> anyhow::Result<()> {
         unreachable!("Should be ensured be settings for clap")
     };
 
-    println!("Hello, world! {:?}", dirs::config_dir());
+    // Load config
+    let config = if let Some(config_path) = cli.config_path {
+        // Load from user supplied config file
+        load_config(PathBuf::from(&config_path))?
+    } else {
+        // Try to load from default
+        let default_config_path = config_path()?;
+        load_config(default_config_path)?
+    };
+
+    dbg!(config);
+
     Ok(())
+}
+
+fn load_config(config_path: PathBuf) -> anyhow::Result<Config> {
+    let config_path = config_path
+        .canonicalize()
+        .with_context(|| format!("failed to canonicalize the path received {config_path:?}"))?;
+    let toml = std::fs::read_to_string(&config_path)
+        .with_context(|| format!("failed to config read from {config_path:?}"))?;
+    let result = toml::from_str(&toml)?;
+    Ok(result)
 }
 
 fn generate_config() -> anyhow::Result<()> {
