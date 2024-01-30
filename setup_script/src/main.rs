@@ -5,6 +5,31 @@ use std::{io::Write as _, path::PathBuf};
 
 use anyhow::{bail, Context};
 
+fn main() -> anyhow::Result<()> {
+    use clap::Parser as _;
+    let cli = cli::Cli::parse();
+    if cli.generate_config {
+        return generate_config();
+    }
+    let Some(target_path) = cli.target_path else {
+        unreachable!("Should be ensured be settings for clap")
+    };
+
+    // Load config
+    let config = if let Some(config_path) = cli.config_path {
+        // Load from user supplied config file
+        load_config(PathBuf::from(&config_path))?
+    } else {
+        // Try to load from default
+        let default_config_path = config_path()?;
+        load_config(default_config_path)?
+    };
+
+    dbg!(config);
+
+    Ok(())
+}
+
 mod cli {
     use clap::Parser;
 
@@ -32,66 +57,17 @@ Create a new egui project from the template.
         #[arg(long)]
         pub generate_config: bool,
     }
-}
+    #[cfg(test)]
+    mod tests {
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-struct ReplacementPair {
-    from: String,
-    to: String,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-struct Config {
-    #[serde(rename = "crate")]
-    crate_: ReplacementPair,
-    author_name: ReplacementPair,
-    author_email: ReplacementPair,
-    source_path: String,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            source_path: "../".into(),
-            crate_: ReplacementPair {
-                from: "eframe_template".into(),
-                to: "your_crate".into(),
-            },
-            author_name: ReplacementPair {
-                from: "Emil Ernerfeldt".into(),
-                to: "".into(),
-            },
-            author_email: ReplacementPair {
-                from: "emil.ernerfeldt@gmail.com".into(),
-                to: "".into(),
-            },
+        #[test]
+        fn verify_cli() {
+            // Source: https://docs.rs/clap/latest/clap/_derive/_tutorial/index.html#testing
+            // My understanding it reports most development errors without additional effort
+            use clap::CommandFactory;
+            super::Cli::command().debug_assert()
         }
     }
-}
-
-fn main() -> anyhow::Result<()> {
-    use clap::Parser as _;
-    let cli = cli::Cli::parse();
-    if cli.generate_config {
-        return generate_config();
-    }
-    let Some(target_path) = cli.target_path else {
-        unreachable!("Should be ensured be settings for clap")
-    };
-
-    // Load config
-    let config = if let Some(config_path) = cli.config_path {
-        // Load from user supplied config file
-        load_config(PathBuf::from(&config_path))?
-    } else {
-        // Try to load from default
-        let default_config_path = config_path()?;
-        load_config(default_config_path)?
-    };
-
-    dbg!(config);
-
-    Ok(())
 }
 
 fn load_config(config_path: PathBuf) -> anyhow::Result<Config> {
@@ -131,14 +107,37 @@ fn config_path() -> anyhow::Result<PathBuf> {
     Ok(result)
 }
 
-#[cfg(test)]
-mod tests {
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct ReplacementPair {
+    from: String,
+    to: String,
+}
 
-    #[test]
-    fn verify_cli() {
-        // Source: https://docs.rs/clap/latest/clap/_derive/_tutorial/index.html#testing
-        // My understanding it reports most development errors without additional effort
-        use clap::CommandFactory;
-        super::cli::Cli::command().debug_assert()
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct Config {
+    #[serde(rename = "crate")]
+    crate_: ReplacementPair,
+    author_name: ReplacementPair,
+    author_email: ReplacementPair,
+    source_path: String,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            source_path: "../".into(),
+            crate_: ReplacementPair {
+                from: "eframe_template".into(),
+                to: "your_crate".into(),
+            },
+            author_name: ReplacementPair {
+                from: "Emil Ernerfeldt".into(),
+                to: "".into(),
+            },
+            author_email: ReplacementPair {
+                from: "emil.ernerfeldt@gmail.com".into(),
+                to: "".into(),
+            },
+        }
     }
 }
