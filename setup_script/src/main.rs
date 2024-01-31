@@ -29,6 +29,8 @@ fn main() -> anyhow::Result<()> {
     let src_path = validate_source_directory(&config.source_path, &config.crate_.src)?;
     println!("Source: {src_path:?}\nDestination: {dst_path:?}");
 
+    copy_dir::copy_dir(&src_path, &dst_path).context("copy failed")?;
+
     println!("Completed successfully");
     Ok(())
 }
