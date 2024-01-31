@@ -11,9 +11,10 @@ fn main() -> anyhow::Result<()> {
     if cli.generate_config {
         return generate_config();
     }
-    let Some(target_path) = cli.target_path else {
+    let Some(dst_path) = cli.dst_path else {
         unreachable!("Should be ensured be settings for clap")
     };
+    let dst_path = PathBuf::from(dst_path);
 
     // Load config
     let config = if let Some(config_path) = cli.config_path {
@@ -26,11 +27,9 @@ fn main() -> anyhow::Result<()> {
     };
 
     let src_path = validate_source_directory(&config.source_path, &config.crate_.src)?;
+    println!("Source: {src_path:?}\nDestination: {dst_path:?}");
 
-    // Get confirmation that user want to run on this source and destination pair
-
-    dbg!(config, src_path);
-
+    println!("Completed successfully");
     Ok(())
 }
 
@@ -51,8 +50,8 @@ Create a new egui project from the template.
     /// Stores the configurations acquired via the command line
     pub struct Cli {
         #[arg(value_name = "TARGET_PATH", required_unless_present_any(["generate_config"]))]
-        /// The new folder to be created (Must not already exist)
-        pub target_path: Option<String>,
+        /// The new folder to be created (Must NOT exist)
+        pub dst_path: Option<String>,
 
         /// The folder to copy from must exist and is expected to be the template
         pub config_path: Option<String>,
