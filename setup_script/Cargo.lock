@@ -152,6 +152,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "egui_template_copy"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "copy_dir",
+ "dirs",
+ "serde",
+ "toml",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -322,18 +334,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb3622f419d1296904700073ea6cc23ad690adbd66f13ea683df73298736f0c1"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "setup_script"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "copy_dir",
- "dirs",
- "serde",
- "toml",
 ]
 
 [[package]]

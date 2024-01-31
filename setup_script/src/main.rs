@@ -38,6 +38,10 @@ fn main() -> anyhow::Result<()> {
         format!("failed to do replacements. Partially setup folder at {dst_path:?}")
     })?;
 
+    delete_setup_files(&dst_path).with_context(|| {
+        format!("failed to remove setup files. Partially setup folder at {dst_path:?}")
+    })?;
+
     println!("Completed successfully");
     Ok(())
 }
@@ -234,7 +238,6 @@ fn replace_values(dst_path: &Path, config: &Config) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// What you want it to say
 fn do_replacement(path: PathBuf, replacements: Vec<&ReplacementPair>) -> anyhow::Result<()> {
     let mut content = std::fs::read_to_string(&path)
         .with_context(|| format!("failed to read contents for {path:?}"))?;
@@ -246,5 +249,12 @@ fn do_replacement(path: PathBuf, replacements: Vec<&ReplacementPair>) -> anyhow:
         .truncate(true)
         .open(path)?;
     file.write_all(content.as_bytes())?;
+    Ok(())
+}
+
+fn delete_setup_files(dst_path: &Path) -> anyhow::Result<()> {
+    std::fs::remove_dir_all(dst_path.join(".git")).context("failed to remove .git folder")?;
+    std::fs::remove_dir_all(dst_path.join("setup_script"))
+        .context("failed to remove setup directory folder")?;
     Ok(())
 }

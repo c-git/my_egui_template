@@ -1,5 +1,5 @@
 [package]
-name = "setup_script"
+name = "egui_template_copy"
 version = "0.1.0"
 edition = "2021"
 
