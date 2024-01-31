@@ -242,7 +242,14 @@ fn do_replacement(path: PathBuf, replacements: Vec<&ReplacementPair>) -> anyhow:
     let mut content = std::fs::read_to_string(&path)
         .with_context(|| format!("failed to read contents for {path:?}"))?;
     for replacement in replacements {
-        content = content.replace(&replacement.from, &replacement.to);
+        let new_content = content.replace(&replacement.from, &replacement.to);
+        if new_content == content {
+            eprintln!(
+                "Warning: Was not able to find {:?} for replacement in {path:?}",
+                replacement.from
+            );
+        }
+        content = new_content;
     }
     let mut file = std::fs::OpenOptions::new()
         .write(true)
