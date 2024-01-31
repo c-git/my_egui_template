@@ -1,7 +1,10 @@
 const CONFIG_FOLDER_NAME: &str = "egui_setup_from_template";
 const CONFIG_FILE_NAME: &str = "config.toml";
 
-use std::{io::Write as _, path::PathBuf};
+use std::{
+    io::Write as _,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{bail, Context};
 
@@ -26,10 +29,14 @@ fn main() -> anyhow::Result<()> {
         load_config(default_config_path)?
     };
 
-    let src_path = validate_source_directory(&config.source_path, &config.crate_.src)?;
+    let src_path = validate_source_directory(&config.source_path, &config.crate_name.from)?;
     println!("Source: {src_path:?}\nDestination: {dst_path:?}");
 
     copy_dir::copy_dir(&src_path, &dst_path).context("copy failed")?;
+
+    replace_values(&dst_path, &config).with_context(|| {
+        format!("failed to do replacements. Partially setup folder at {dst_path:?}")
+    })?;
 
     println!("Completed successfully");
     Ok(())
@@ -142,35 +149,102 @@ fn config_path() -> anyhow::Result<PathBuf> {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct ReplacementPair {
-    src: String,
-    dst: String,
+    from: String,
+    to: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct Config {
-    #[serde(rename = "crate")]
-    crate_: ReplacementPair,
+    crate_name: ReplacementPair,
     author_name: ReplacementPair,
     author_email: ReplacementPair,
+    struct_name: ReplacementPair,
+    app_title: ReplacementPair,
+    manifest_name: ReplacementPair,
+    manifest_short_name: ReplacementPair,
     source_path: String,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            source_path: "../".into(),
-            crate_: ReplacementPair {
-                src: "eframe_template".into(),
-                dst: "your_crate".into(),
+            crate_name: ReplacementPair {
+                from: "eframe_template".into(),
+                to: "your_crate".into(),
             },
             author_name: ReplacementPair {
-                src: "Emil Ernerfeldt".into(),
-                dst: "".into(),
+                from: "Emil Ernerfeldt".into(),
+                to: "".into(),
+            },
+            struct_name: ReplacementPair {
+                from: "TemplateApp".into(),
+                to: "MyApp".into(),
+            },
+            app_title: ReplacementPair {
+                from: "eframe template".into(),
+                to: "app title".into(),
             },
             author_email: ReplacementPair {
-                src: "emil.ernerfeldt@gmail.com".into(),
-                dst: "".into(),
+                from: "emil.ernerfeldt@gmail.com".into(),
+                to: "".into(),
             },
+            manifest_name: ReplacementPair {
+                from: "egui Template PWA".into(),
+                to: "my app PWA".into(),
+            },
+            manifest_short_name: ReplacementPair {
+                from: "egui-template-pwa".into(),
+                to: "my-app-pwa".into(),
+            },
+            source_path: "../".into(),
         }
     }
+}
+
+fn replace_values(dst_path: &Path, config: &Config) -> anyhow::Result<()> {
+    do_replacement(
+        dst_path.join("Cargo.toml"),
+        vec![
+            &config.crate_name,
+            &config.author_name,
+            &config.author_email,
+        ],
+    )?;
+    do_replacement(dst_path.join("index.html"), vec![&config.app_title])?;
+    do_replacement(
+        dst_path.join("assets").join("manifest.json"),
+        vec![&config.manifest_name, &config.manifest_short_name],
+    )?;
+    do_replacement(
+        dst_path.join("assets").join("sw.js"),
+        vec![&config.crate_name, &config.manifest_short_name],
+    )?;
+    do_replacement(
+        dst_path.join("src").join("app.rs"),
+        vec![&config.struct_name, &config.app_title],
+    )?;
+    do_replacement(
+        dst_path.join("src").join("lib.rs"),
+        vec![&config.struct_name],
+    )?;
+    do_replacement(
+        dst_path.join("src").join("main.rs"),
+        vec![&config.struct_name, &config.app_title, &config.crate_name],
+    )?;
+    Ok(())
+}
+
+/// What you want it to say
+fn do_replacement(path: PathBuf, replacements: Vec<&ReplacementPair>) -> anyhow::Result<()> {
+    let mut content = std::fs::read_to_string(&path)
+        .with_context(|| format!("failed to read contents for {path:?}"))?;
+    for replacement in replacements {
+        content = content.replace(&replacement.from, &replacement.to);
+    }
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(path)?;
+    file.write_all(content.as_bytes())?;
+    Ok(())
 }
