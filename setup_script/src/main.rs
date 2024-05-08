@@ -9,6 +9,7 @@ use std::{
 use anyhow::{bail, Context};
 
 // TODO: Should be more like a wizard and show defaults and let you override because they must change for each project
+// TODO: Add LICENSE-APACHE to what gets updated with owner info and dynamic content of the year
 
 fn main() -> anyhow::Result<()> {
     use clap::Parser as _;
