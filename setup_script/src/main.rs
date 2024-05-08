@@ -8,6 +8,8 @@ use std::{
 
 use anyhow::{bail, Context};
 
+// TODO: Should be more like a wizard and show defaults and let you override because they must change for each project
+
 fn main() -> anyhow::Result<()> {
     use clap::Parser as _;
     let cli = cli::Cli::parse();
