@@ -1,3 +1,5 @@
+I think this doesn't add sufficent value over the scripts that got merged into the official template to warrent onging maintenace and has been sunset as a result.
+
 # eframe template
 
 [![dependency status](https://deps.rs/repo/github/emilk/eframe_template/status.svg)](https://deps.rs/repo/github/emilk/eframe_template)
